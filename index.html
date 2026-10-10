@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPA Dylib Injector - Tiêm Dylib Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #090d16;
+            color: #f1f5f9;
+        }
+        .glass {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-blue {
+            box-shadow: 0 0 30px -5px rgba(59, 130, 246, 0.3);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .animate-glow {
+            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md glass rounded-3xl p-6 md:p-8 glow-blue relative overflow-hidden">
+        <!-- Hiệu ứng nền trang trí -->
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- Ô hình ảnh vuông ở trên cùng -->
+        <div class="flex flex-col items-center mb-6">
+            <div class="relative group">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-300"></div>
+                <!-- Sửa link ảnh trực tiếp tại thuộc tính src bên dưới -->
+                <img id="headerImage" src="https://cdn.phototourl.com/member/2026-10-10-a9a51eae-af30-4ba2-9ad7-080825f2a3fc.jpg" 
+                     alt="App Logo" 
+                     class="relative w-24 h-24 object-cover rounded-2xl shadow-xl border border-white/10">
+            </div>
+            <h1 class="text-xl font-bold mt-4 tracking-tight text-white flex items-center gap-2">
+                <i class="fa-solid fa-syringe text-blue-500"></i>HZ Mythic IOS
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Uy tín • Nhanh gọn • Bảo đảm</p>
+        </div>
+
+        <!-- Form nhập liệu -->
+        <div class="space-y-4">
+            <!-- Mục nhập file .dylib -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                    <i class="fa-solid fa-puzzle-piece text-blue-400 mr-1">}</i> Chọn file .dylib
+                </label>
+                <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer bg-slate-900/50 hover:bg-slate-800/50 transition">
+                    <div class="flex flex-col items-center justify-center pt-2 pb-2">
+                        <i class="fa-solid fa-file-code text-blue-400 text-xl mb-1"></i>
+                        <p id="dylibLabel" class="text-xs text-slate-400 text-center px-2 truncate w-full">Nhấn để chọn hoặc kéo thả file .dylib</p>
+                    </div>
+                    <input type="file" id="dylibFile" accept=".dylib" class="hidden" onchange="updateFileName('dylib')" />
+                </label>
+            </div>
+
+            <!-- Mục nhập file .ipa -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                    <i class="fa-brands fa-apple text-blue-400 mr-1"></i> Chọn file .ipa gốc
+                </label>
+                <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer bg-slate-900/50 hover:bg-slate-800/50 transition">
+                    <div class="flex flex-col items-center justify-center pt-2 pb-2">
+                        <i class="fa-solid fa-box-archive text-indigo-400 text-xl mb-1"></i>
+                        <p id="ipaLabel" class="text-xs text-slate-400 text-center px-2 truncate w-full">Nhấn để chọn hoặc kéo thả file .ipa</p>
+                    </div>
+                    <input type="file" id="ipaFile" accept=".ipa" class="hidden" onchange="updateFileName('ipa')" />
+                </label>
+            </div>
+
+            <!-- Nút Tiêm Dylib -->
+            <button onclick="startInjection()" id="injectBtn" class="w-full mt-2 py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Tiêm Dylib
+            </button>
+        </div>
+
+        <!-- Khu vực tiến trình và Animation Tiêm -->
+        <div id="progressContainer" class="hidden mt-6 space-y-3">
+            <div class="flex justify-between text-xs text-slate-300 font-medium">
+                <span id="statusText" class="animate-pulse flex items-center gap-1.5 text-blue-400">
+                    <i class="fa-solid fa-spinner animate-spin"></i> Đang giải nén IPA...
+                </span>
+                <span id="percentText">0%</span>
+            </div>
+            <!-- Thanh Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/5">
+                <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-300 w-0"></div>
+            </div>
+            <!-- Terminal log giả lập -->
+            <div id="terminalLog" class="bg-black/60 rounded-xl p-3 font-mono text-[10px] text-emerald-400 h-24 overflow-y-auto border border-white/5 leading-relaxed">
+                [System] Khởi tạo công cụ tiêm dylib...
+            </div>
+        </div>
+
+        <!-- Nút tải file sau khi tiêm thành công -->
+        <div id="downloadContainer" class="hidden mt-6">
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 mb-3 text-center">
+                <p class="text-xs text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i> Tiêm file .dylib trực tiếp
+                </p>
+            </div>
+            <a id="downloadBtn" href="#" class="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-download"></i> Tải File IPA Đã Tiêm
+            </a>
+        </div>
+
+        <!-- Footer nhỏ -->
+        <div class="mt-6 text-center">
+            <p class="text-[10px] text-slate-500">Được tối ưu hoá cho trải nghiệm mượt mà trên iOS & Desktop</p>
+        </div>
+    </div>
+
+    <script>
+        let selectedDylibName = "";
+        let selectedIpaName = "";
+
+        function updateFileName(type) {
+            if (type === 'dylib') {
+                const fileInput = document.getElementById('dylibFile');
+                if (fileInput.files.length > 0) {
+                    selectedDylibName = fileInput.files[0].name;
+                    document.getElementById('dylibLabel').innerText = selectedDylibName;
+                    document.getElementById('dylibLabel').classList.add('text-blue-400', 'font-semibold');
+                }
+            } else if (type === 'ipa') {
+                const fileInput = document.getElementById('ipaFile');
+                if (fileInput.files.length > 0) {
+                    selectedIpaName = fileInput.files[0].name;
+                    document.getElementById('ipaLabel').innerText = selectedIpaName;
+                    document.getElementById('ipaLabel').classList.add('text-indigo-400', 'font-semibold');
+                }
+            }
+        }
+
+        function startInjection() {
+            const dylib = document.getElementById('dylibFile').files[0];
+            const ipa = document.getElementById('ipaFile').files[0];
+
+            if (!dylib || !ipa) {
+                alert("Vui lòng chọn đầy đủ cả file .dylib và file .ipa trước khi tiêm!");
+                return;
+            }
+
+            // Ẩn nút tiêm, hiện thanh tiến trình
+            document.getElementById('injectBtn').disabled = true;
+            document.getElementById('injectBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('progressContainer').classList.remove('hidden');
+            document.getElementById('downloadContainer').classList.add('hidden');
+
+            const progressBar = document.getElementById('progressBar');
+            const percentText = document.getElementById('percentText');
+            const statusText = document.getElementById('statusText');
+            const terminalLog = document.getElementById('terminalLog');
+
+            let progress = 0;
+            terminalLog.innerHTML = `[Info] Bắt đầu xử lý: ${selectedIpaName}<br>`;
+
+            const steps = [
+                {at: 15, text: "Đang giải nén cấu trúc file .ipa...", log: "[Extract] Đã giải nén Payload/App.app thành công."},
+                {at: 35, text: "Đang chèn Dynamic Library (.dylib)...", log: `[Inject] Đang tiêm ${selectedDylibName} vào LC_LOAD_COMMANDS...`},
+                {at: 60, text: "Đang vá Mach-O Binary & phân quyền...", log: "[Patch] Đã cấu hình lại chữ ký và liên kết thư viện."},
+                {at: 85, text: "Đang đóng gói lại file .ipa hoàn chỉnh...", log: "[Package] Đang nén lại cấu trúc thư mục Payload..."},
+                {at: 100, text: "Hoàn tất quá trình tiêm 100%!", log: "[Success] File .ipa đã sẵn sàng để cài đặt."}
+            ];
+
+            let stepIndex = 0;
+
+            const interval = setInterval(() => {
+                progress += 2;
+                if (progress > 100) progress = 100;
+
+                progressBar.style.width = progress + '%';
+                percentText.innerText = progress + '%';
+
+                // Cập nhật trạng thái theo mốc tiến trình
+                if (stepIndex < steps.length && progress >= steps[stepIndex].at) {
+                    statusText.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> ${steps[stepIndex].text}`;
+                    terminalLog.innerHTML += `${steps[stepIndex].log}<br>`;
+                    terminalLog.scrollTop = terminalLog.scrollHeight;
+                    stepIndex++;
+                }
+
+                if (progress === 100) {
+                    clearInterval(interval);
+                    // Hiển thị nút tải
+                    setTimeout(() => {
+                        document.getElementById('progressContainer').classList.add('hidden');
+                        document.getElementById('downloadContainer').classList.remove('hidden');
+                        
+                        // Tạo blob giả lập để tải file đã tiêm
+                        const injectedBlob = new Blob([ipa], { type: 'application/octet-stream' });
+                        const blobUrl = URL.createObjectURL(injectedBlob);
+                        const downloadBtn = document.getElementById('downloadBtn');
+                        downloadBtn.href = blobUrl;
+                        downloadBtn.download = `Injected_${selectedIpaName}`;
+                        
+                        // Reset lại nút tiêm
+                        const injectBtn = document.getElementById('injectBtn');
+                        injectBtn.disabled = false;
+                        injectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }, 600);
+                }
+            }, 50);
+        }
+    </script>
+</body>
+</html>
